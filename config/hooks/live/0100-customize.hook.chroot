@@ -19,7 +19,6 @@ cat > /etc/sddm.conf.d/harrisonos.conf << 'EOF'
 Current=breeze
 
 [Autologin]
-User=user
 Session=plasma
 
 [General]
@@ -330,7 +329,6 @@ WELCOME
 chmod +x /usr/local/bin/harrisonos-welcome
 
 # ── Sudo for live user ─────────────────────────────────────────────────────
-echo "user ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/live-user
 chmod 440 /etc/sudoers.d/live-user
 
 # ── Neofetch Config ─────────────────────────────────────────────────────────
