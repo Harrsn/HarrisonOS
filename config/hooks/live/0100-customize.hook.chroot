@@ -359,6 +359,7 @@ print_info() {
 }
 image_backend="ascii"
 image_source="etc/neofetch-logo.txt"
+ascii_colors=(6 6 6 6 6 6)
 NEOF
 
 
