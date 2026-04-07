@@ -357,8 +357,11 @@ print_info() {
     info "Battery" battery
     info cols
 }
-ascii_distro="Debian"
+image_backend="ascii"
+image_source="etc/neofetch-logo.txt"
 NEOF
+
+
 
 # ── Bash Customization ─────────────────────────────────────────────────────
 cat >> /etc/skel/.bashrc << 'BASHEOF'
@@ -562,3 +565,11 @@ apt-get clean
 rm -rf /tmp/* /var/tmp/*
 
 echo "[HOOK] $DISTRO_NAME customizations complete!"
+
+cat > /etc/neofetch-logo.txt << 'LOGO'
+       _  _   ___  ___
+      | || | / _ \/ __|
+      | __ || (_) \__ \
+      |_||_| \___/|___/
+    H a r r i s o n O S
+LOGO
