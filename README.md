@@ -1,170 +1,102 @@
-# HarrisonOS — Custom Debian-Based Linux Distribution
+<p align="center">
+  <img src="https://img.shields.io/badge/base-Debian%20Bookworm-a80030?style=flat-square" alt="Debian Bookworm">
+  <img src="https://img.shields.io/badge/desktop-KDE%20Plasma-1d99f3?style=flat-square" alt="KDE Plasma">
+  <img src="https://img.shields.io/badge/arch-amd64-333?style=flat-square" alt="amd64">
+  <img src="https://img.shields.io/github/v/release/Harrsn/HarrisonOS?style=flat-square&color=2ea043" alt="Latest Release">
+  <img src="https://img.shields.io/github/actions/workflow/status/Harrsn/HarrisonOS/build-iso.yml?style=flat-square&label=ISO%20build" alt="Build Status">
+</p>
 
-A fully customizable Debian Bookworm-based distribution with KDE Plasma desktop,
-built using `live-build`. Produces a bootable/installable ISO you can share.
+<h1 align="center">HarrisonOS</h1>
+<p align="center"><strong>A custom Linux distribution built on Debian stable with KDE Plasma.</strong><br>Opinionated defaults. Developer-ready out of the box. One ISO.</p>
 
 ---
 
-## Setting Up Your Build Machine (Second PC)
+## What is this?
 
-Since your main workstation is Windows 11, use your second PC as a dedicated
-build machine. You need a Debian or Ubuntu install on it.
+HarrisonOS is a custom Debian Bookworm-based Linux distribution that ships as a single bootable ISO. It's designed to be a complete workstation environment from the moment you boot — dark-themed KDE Plasma desktop, a full development toolchain, networking utilities, multimedia apps, and a curated set of CLI power tools, all pre-configured with sane defaults.
 
-### Option A: Install Debian 12 (Bookworm) — Recommended
-1. Download the netinst ISO: https://www.debian.org/download
-2. Flash to USB: use [Rufus](https://rufus.ie/) on your Windows PC
-3. Boot the second PC from USB, install Debian with minimal/server profile
-4. After install, SSH into it from your Windows PC:
-   ```
-   ssh user@<second-pc-ip>
-   ```
+No post-install setup scripts. No "now install your 40 favorite packages." Just flash, boot, and work.
 
-### Option B: Use a VM on your Windows PC
-If you'd rather not dedicate the second PC:
-```powershell
-# Windows — install WSL2 with Debian
-wsl --install -d Debian
-```
-Note: WSL2 works but can be slower for disk-heavy builds. A real Debian
-install on the second PC is ideal.
+## Download
 
-### Once you have a Debian/Ubuntu environment:
+Grab the latest ISO from the [**Releases**](https://github.com/Harrsn/HarrisonOS/releases) page.
+
+**Flash to USB:**
 ```bash
-# Install build dependencies
-sudo apt update && sudo apt install -y \
-    live-build debootstrap squashfs-tools xorriso \
-    grub-pc-bin grub-efi-amd64-bin mtools dosfstools \
-    git python3 python3-pip
+# Linux / macOS
+sudo dd if=HarrisonOS-1.0-amd64.hybrid.iso of=/dev/sdX bs=4M status=progress
 
-# Clone the repo
-git clone https://github.com/YOUR_USERNAME/HarrisonOS.git
+# Windows — use Rufus (https://rufus.ie), Ventoy, or balenaEtcher
+```
+
+**Test in a VM:**
+```bash
+qemu-system-x86_64 -m 4096 -cdrom HarrisonOS-1.0-amd64.hybrid.iso -boot d -enable-kvm -smp 4
+```
+
+## What's included
+
+<table>
+<tr><td><strong>Desktop</strong></td><td>KDE Plasma with Breeze Dark, Papirus icons, Fira Code terminal font, Noto Sans UI</td></tr>
+<tr><td><strong>Browser</strong></td><td>Firefox ESR</td></tr>
+<tr><td><strong>Dev tools</strong></td><td>Python 3, pip, venv, Flask, Git, GCC, CMake, Neovim, Docker, QEMU/KVM</td></tr>
+<tr><td><strong>Networking</strong></td><td>Wireshark, nmap, WireGuard, OpenVPN, Remmina, iperf3, tcpdump</td></tr>
+<tr><td><strong>CLI</strong></td><td>fzf, ripgrep, fd, bat, exa, btop, htop, tmux, zsh, ranger, ncdu, tldr</td></tr>
+<tr><td><strong>Multimedia</strong></td><td>VLC, mpv, OBS Studio, GIMP, Inkscape, Kdenlive, Audacity, PipeWire</td></tr>
+<tr><td><strong>Office</strong></td><td>LibreOffice (Plasma integration + Breeze theme)</td></tr>
+<tr><td><strong>Security</strong></td><td>UFW, fail2ban, KeePassXC, ClamAV</td></tr>
+<tr><td><strong>Extras</strong></td><td>Flatpak + Flathub, CUPS printing, full firmware/driver bundle</td></tr>
+</table>
+
+The shell comes pre-loaded with 40+ aliases, FZF integration, a configured `.tmux.conf`, `.vimrc`, `.nanorc`, `.gitconfig`, and neofetch on terminal open.
+
+## Screenshots
+
+> *Coming soon — boot it up and see for yourself.*
+
+## Build it yourself
+
+Want to customize it or just see how it works? The entire distro is defined by a few config files and a build script.
+
+**Requirements:** A Debian or Ubuntu machine (bare metal, VM, or WSL2).
+
+```bash
+# Install build tools
+sudo apt install -y live-build debootstrap squashfs-tools xorriso \
+    grub-pc-bin grub-efi-amd64-bin mtools dosfstools git
+
+# Clone and build
+git clone https://github.com/Harrsn/HarrisonOS.git
 cd HarrisonOS
-```
-
----
-
-## Quick Start
-
-```bash
-# 1. Run setup (configures live-build)
-chmod +x setup.sh
-./setup.sh
-
-# 2. Build the ISO (20-60 min depending on hardware + internet)
+chmod +x setup.sh && ./setup.sh
 cd build
 sudo lb build 2>&1 | tee build.log
-
-# 3. Your ISO is ready!
-ls -lh HarrisonOS-*.iso
 ```
 
-## Testing the ISO
-
-```bash
-# QEMU (install: sudo apt install qemu-system-x86)
-qemu-system-x86_64 -m 4096 -cdrom build/HarrisonOS-1.0-amd64.hybrid.iso \
-    -boot d -enable-kvm -smp 4
-
-# Or write to USB (replace /dev/sdX with your USB device!)
-sudo dd if=build/HarrisonOS-1.0-amd64.hybrid.iso of=/dev/sdX bs=4M status=progress sync
-```
-
----
-
-## Project Structure
-
-```
-HarrisonOS/
-├── README.md
-├── setup.sh                            # Configures live-build
-├── config/
-│   ├── package-lists/
-│   │   └── desktop.list.chroot         # All packages to include
-│   ├── hooks/
-│   │   └── live/
-│   │       └── 0100-customize.hook.chroot  # System customization script
-│   └── includes.chroot/                # Files overlaid onto the filesystem
-│       ├── etc/
-│       │   ├── hostname
-│       │   ├── os-release
-│       │   ├── issue
-│       │   └── skel/                   # Default home directory template
-│       │       └── .config/
-│       │           ├── autostart/
-│       │           │   └── welcome.desktop
-│       │           └── plasma-org.kde.plasma.desktop-appletsrc
-│       └── usr/
-│           └── share/
-│               └── wallpapers/
-│                   └── harrisonos/
-├── branding/
-│   └── wallpaper.py                    # Wallpaper generator (requires Pillow)
-├── .github/
-│   └── workflows/
-│       └── build-iso.yml               # GitHub Actions CI pipeline
-└── .gitignore
-```
-
----
+The ISO lands in the `build/` directory. Takes 20–60 minutes depending on hardware and internet speed.
 
 ## Customization
 
-### Add/remove packages
-Edit `config/package-lists/desktop.list.chroot` — one package per line.
+| Want to... | Edit this file |
+|---|---|
+| Add or remove packages | `config/package-lists/desktop.list.chroot` |
+| Change system settings, themes, shell config | `config/hooks/live/0100-customize.hook.chroot` |
+| Add files to the filesystem | Drop them in `config/includes.chroot/` mirroring the target path |
+| Change distro name/branding | `setup.sh` + `config/includes.chroot/etc/os-release` |
 
-### Change system settings
-Edit `config/hooks/live/0100-customize.hook.chroot` — this runs inside the
-chroot during build. Anything you can do in a shell script, you can do here.
-
-### Add files to the ISO
-Drop them in `config/includes.chroot/` mirroring the target path:
-- `config/includes.chroot/usr/local/bin/my-tool` → `/usr/local/bin/my-tool`
-- `config/includes.chroot/etc/my-app.conf` → `/etc/my-app.conf`
-
-### Rebuild after changes
+After editing, rebuild:
 ```bash
-cd build
-sudo lb clean       # Clean previous build (keeps package cache)
-sudo lb build 2>&1 | tee build.log
+cd build && sudo lb clean && sudo lb build 2>&1 | tee build.log
 ```
 
-### Full clean rebuild (if things break)
-```bash
-cd build
-sudo lb clean --purge
-cd ..
-./setup.sh
-cd build
-sudo lb build 2>&1 | tee build.log
-```
+## CI/CD
+
+Every push to `main` builds the ISO via GitHub Actions. Tagged releases (e.g. `v1.0`) automatically create a GitHub Release with the ISO attached for download.
+
+## License
+
+The build system and configuration files in this repository are released under the [MIT License](LICENSE). HarrisonOS is assembled from Debian packages, each of which carries its own license.
 
 ---
 
-## CI/CD Pipeline
-
-The project includes a GitHub Actions workflow that automatically builds the
-ISO on every push to `main` or when you create a tag.
-
-### Setup
-1. Push this repo to GitHub
-2. The workflow runs automatically
-3. Tagged releases (e.g., `v1.0`) upload the ISO as a GitHub Release asset
-
-### Trigger a release
-```bash
-git tag v1.0
-git push origin v1.0
-```
-
-The ISO will be built and attached to the GitHub Release page for download.
-
----
-
-## Tips
-
-- **Build on the second PC** over SSH from your Windows machine for the best
-  experience — edit on Windows, build on Linux.
-- **Use VS Code Remote SSH** to edit files directly on the build machine.
-- First build downloads ~2-3 GB of packages. Subsequent builds use the cache.
-- Build needs ~15-20 GB free disk space.
-- `sudo lb clean` (without `--purge`) keeps the package cache for fast rebuilds.
+<p align="center"><sub>Built in West Virginia.</sub></p>
