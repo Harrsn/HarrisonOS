@@ -1,0 +1,566 @@
+#!/bin/bash
+# ============================================================================
+# HarrisonOS — Chroot Customization Hook (KDE Plasma)
+# Runs inside the chroot during build to apply system-level customizations
+# ============================================================================
+
+set -euo pipefail
+
+DISTRO_NAME="HarrisonOS"
+
+echo "[HOOK] Starting $DISTRO_NAME customizations..."
+
+# ── SDDM Configuration ─────────────────────────────────────────────────────
+echo "[HOOK] Configuring SDDM..."
+mkdir -p /etc/sddm.conf.d
+
+cat > /etc/sddm.conf.d/harrisonos.conf << 'EOF'
+[Theme]
+Current=breeze
+
+[Autologin]
+User=user
+Session=plasma
+
+[General]
+HaltCommand=/usr/bin/systemctl poweroff
+RebootCommand=/usr/bin/systemctl reboot
+EOF
+
+# Enable SDDM
+systemctl enable sddm 2>/dev/null || true
+# Disable GDM if present (shouldn't be, but just in case)
+systemctl disable gdm3 2>/dev/null || true
+
+# ── KDE Plasma Global Defaults ─────────────────────────────────────────────
+echo "[HOOK] Setting KDE Plasma defaults..."
+
+# Global KDE settings (applied to all new users via /etc/skel)
+SKEL_KDE="/etc/skel/.config"
+mkdir -p "$SKEL_KDE"
+
+# -- Plasma desktop layout & favorites
+cat > "$SKEL_KDE/plasma-org.kde.plasma.desktop-appletsrc" << 'EOF'
+[ActionPlugins][0]
+RightButton;NoModifier=org.kde.contextmenu
+
+[Containments][1]
+activityId=
+formfactor=0
+immutability=1
+lastScreen=0
+location=0
+plugin=org.kde.plasma.folder
+wallpaperplugin=org.kde.image
+
+[Containments][2]
+activityId=
+formfactor=2
+immutability=1
+lastScreen=0
+location=4
+plugin=org.kde.panel
+
+[Containments][2][Applets][3]
+immutability=1
+plugin=org.kde.plasma.kickoff
+
+[Containments][2][Applets][4]
+immutability=1
+plugin=org.kde.plasma.pager
+
+[Containments][2][Applets][5]
+immutability=1
+plugin=org.kde.plasma.icontasks
+
+[Containments][2][Applets][6]
+immutability=1
+plugin=org.kde.plasma.marginsseparator
+
+[Containments][2][Applets][7]
+immutability=1
+plugin=org.kde.plasma.systemtray
+
+[Containments][2][Applets][8]
+immutability=1
+plugin=org.kde.plasma.digitalclock
+
+[Containments][2][Applets][8][Configuration][Appearance]
+showDate=true
+showSeconds=false
+
+[Containments][2][General]
+AppletOrder=3;4;5;6;7;8
+EOF
+
+# -- Global theme: Breeze Dark
+cat > "$SKEL_KDE/kdeglobals" << 'EOF'
+[General]
+ColorScheme=BreezeDark
+Name=Breeze Dark
+fixed=Fira Code,12,-1,5,50,0,0,0,0,0
+font=Noto Sans,11,-1,5,50,0,0,0,0,0
+menuFont=Noto Sans,11,-1,5,50,0,0,0,0,0
+smallestReadableFont=Noto Sans,9,-1,5,50,0,0,0,0,0
+toolBarFont=Noto Sans,10,-1,5,50,0,0,0,0,0
+desktopFont=Noto Sans,11,-1,5,50,0,0,0,0,0
+
+[Icons]
+Theme=Papirus-Dark
+
+[KDE]
+LookAndFeelPackage=org.kde.breezedark.desktop
+SingleClick=false
+AnimationDurationFactor=0.5
+ShowDeleteCommand=true
+
+[WM]
+activeFont=Noto Sans,11,-1,5,63,0,0,0,0,0,Demi Bold
+EOF
+
+# -- Konsole profile
+mkdir -p "$SKEL_KDE/konsolerc.d"
+cat > "$SKEL_KDE/konsolerc" << 'EOF'
+[Desktop Entry]
+DefaultProfile=HarrisonOS.profile
+
+[MainWindow]
+MenuBar=Disabled
+ToolBarsMovable=Disabled
+EOF
+
+mkdir -p "/usr/share/konsole"
+cat > "/usr/share/konsole/HarrisonOS.profile" << 'EOF'
+[Appearance]
+ColorScheme=Breeze
+Font=Fira Code,12,-1,5,50,0,0,0,0,0
+
+[General]
+Command=/bin/bash
+Name=HarrisonOS
+Parent=FALLBACK/
+TerminalColumns=120
+TerminalRows=35
+
+[Scrolling]
+HistoryMode=2
+ScrollBarPosition=2
+EOF
+
+# -- Dolphin settings
+cat > "$SKEL_KDE/dolphinrc" << 'EOF'
+[General]
+ShowFullPath=true
+ShowFullPathInTitlebar=true
+ShowToolTips=true
+SortingChoice=1
+ViewPropsTimestamp=2024,1,1,0,0,0
+
+[DetailsMode]
+PreviewSize=22
+
+[IconsMode]
+PreviewSize=128
+EOF
+
+# -- Taskbar pinned apps
+mkdir -p "$SKEL_KDE"
+cat > "$SKEL_KDE/kactivitymanagerd-pluginsrc" << 'EOF'
+[Plugin-org.kde.ActivityManager.Resources.Scoring]
+what-to-remember=1
+EOF
+
+cat > "$SKEL_KDE/plasma-org.kde.plasma.desktop-appletsrc.favorites" << 'EOF'
+preferred://browser,org.kde.dolphin.desktop,org.kde.konsole.desktop,org.kde.kate.desktop,org.kde.spectacle.desktop,org.kde.ksysguard.desktop
+EOF
+
+# -- Desktop wallpaper config
+mkdir -p "$SKEL_KDE/plasma-org.kde.plasma.desktop-appletsrc.d"
+
+# -- KWin compositing
+cat > "$SKEL_KDE/kwinrc" << 'EOF'
+[Compositing]
+Backend=OpenGL
+GLCore=true
+AnimationSpeed=3
+Enabled=true
+
+[Desktops]
+Number=2
+Rows=1
+Name_1=Main
+Name_2=Work
+
+[Effect-overview]
+BorderActivate=9
+
+[Plugins]
+slideEnabled=true
+dimscreenEnabled=true
+wobblywindowsEnabled=false
+
+[Windows]
+FocusPolicy=ClickToFocus
+BorderlessMaximizedWindows=false
+EOF
+
+# -- Keyboard shortcuts
+cat > "$SKEL_KDE/kglobalshortcutsrc.harrisonos" << 'EOF'
+# Custom shortcuts — merged on first login
+# Spectacle screenshot: Print key
+# Konsole: Meta+Return
+# Overview: Meta+Tab
+EOF
+
+# ── Wallpaper ───────────────────────────────────────────────────────────────
+echo "[HOOK] Generating wallpaper..."
+mkdir -p /usr/share/wallpapers/harrisonos/contents/images
+
+# Generate a gradient wallpaper using pure Python (no Pillow needed)
+python3 << 'PYEOF'
+import struct, zlib
+
+WIDTH, HEIGHT = 1920, 1080
+
+pixels = []
+for y in range(HEIGHT):
+    row = []
+    t = y / HEIGHT
+    t_smooth = t * t * (3 - 2 * t)  # smoothstep
+
+    # Deep navy to dark slate gradient
+    r = int(10 + t_smooth * 22)
+    g = int(15 + t_smooth * 28)
+    b = int(38 + t_smooth * 25)
+
+    # Subtle lighter region in upper right
+    for x in range(WIDTH):
+        dx = (x / WIDTH - 0.75)
+        dy = (y / HEIGHT - 0.2)
+        dist = (dx * dx + dy * dy) ** 0.5
+        glow = max(0, 1 - dist * 2.2)
+        glow = glow * glow * 12
+
+        px_r = min(255, int(r + glow * 1.5))
+        px_g = min(255, int(g + glow * 2))
+        px_b = min(255, int(b + glow * 3))
+        row.extend([px_r, px_g, px_b])
+    pixels.append(bytes(row))
+
+def write_png(w, h, rows, path):
+    def chunk(ctype, data):
+        c = ctype + data
+        crc = struct.pack('>I', zlib.crc32(c) & 0xffffffff)
+        return struct.pack('>I', len(data)) + c + crc
+
+    sig = b'\x89PNG\r\n\x1a\n'
+    ihdr = chunk(b'IHDR', struct.pack('>IIBBBBB', w, h, 8, 2, 0, 0, 0))
+    raw = b''.join(b'\x00' + r for r in rows)
+    idat = chunk(b'IDAT', zlib.compress(raw, 9))
+    iend = chunk(b'IEND', b'')
+
+    with open(path, 'wb') as f:
+        f.write(sig + ihdr + idat + iend)
+
+write_png(WIDTH, HEIGHT, pixels, '/usr/share/wallpapers/harrisonos/contents/images/1920x1080.png')
+print("[HOOK] Wallpaper generated: 1920x1080")
+PYEOF
+
+# KDE wallpaper metadata
+cat > /usr/share/wallpapers/harrisonos/metadata.desktop << 'EOF'
+[Desktop Entry]
+Name=HarrisonOS Aurora
+X-KDE-PluginInfo-Name=harrisonos
+X-KDE-PluginInfo-Author=HarrisonOS Team
+X-KDE-PluginInfo-License=CC0
+EOF
+
+# ── Plymouth Boot Splash ───────────────────────────────────────────────────
+if command -v plymouth-set-default-theme &>/dev/null; then
+    plymouth-set-default-theme -R bgrt 2>/dev/null || true
+fi
+
+# ── Flatpak: Enable Flathub ────────────────────────────────────────────────
+echo "[HOOK] Configuring Flatpak..."
+if command -v flatpak &>/dev/null; then
+    flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
+fi
+
+# ── Docker: Enable for live user ────────────────────────────────────────────
+if getent group docker &>/dev/null; then
+    usermod -aG docker user 2>/dev/null || true
+fi
+
+# ── UFW Firewall Defaults ──────────────────────────────────────────────────
+if command -v ufw &>/dev/null; then
+    ufw default deny incoming 2>/dev/null || true
+    ufw default allow outgoing 2>/dev/null || true
+    ufw allow ssh 2>/dev/null || true
+    # Don't enable yet — let user choose
+fi
+
+# ── Welcome Application ────────────────────────────────────────────────────
+echo "[HOOK] Creating welcome app..."
+cat > /usr/local/bin/harrisonos-welcome << 'WELCOME'
+#!/bin/bash
+# HarrisonOS Welcome — shown on first login via KDialog
+
+kdialog --msgbox "$(cat << MSGEOF
+Welcome to HarrisonOS 1.0 (Aurora)
+
+A custom Debian-based distribution with KDE Plasma.
+
+Quick tips:
+  • Right-click the desktop to customize
+  • Press Meta to open the app launcher
+  • Konsole is pinned to your taskbar
+  • Docker and Flatpak are pre-configured
+  • Run 'neofetch' to see system info
+
+Enjoy your new OS!
+MSGEOF
+)" --title "Welcome to HarrisonOS" 2>/dev/null || \
+zenity --info --title="Welcome to HarrisonOS" \
+    --text="Welcome to HarrisonOS 1.0 (Aurora)\n\nA custom Debian-based distribution with KDE Plasma." \
+    --width=400 --height=300 2>/dev/null || true
+
+# Self-remove so it only shows once
+rm -f ~/.config/autostart/welcome.desktop
+WELCOME
+chmod +x /usr/local/bin/harrisonos-welcome
+
+# ── Sudo for live user ─────────────────────────────────────────────────────
+echo "user ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/live-user
+chmod 440 /etc/sudoers.d/live-user
+
+# ── Neofetch Config ─────────────────────────────────────────────────────────
+mkdir -p /etc/skel/.config/neofetch
+cat > /etc/skel/.config/neofetch/config.conf << 'NEOF'
+print_info() {
+    info title
+    info underline
+    info "OS" distro
+    info "Host" model
+    info "Kernel" kernel
+    info "Uptime" uptime
+    info "Packages" packages
+    info "Shell" shell
+    info "Resolution" resolution
+    info "DE" de
+    info "WM" wm
+    info "Theme" theme
+    info "Icons" icons
+    info "Terminal" term
+    info "Terminal Font" term_font
+    info "CPU" cpu
+    info "GPU" gpu
+    info "Memory" memory
+    info "Disk" disk
+    info "Battery" battery
+    info cols
+}
+ascii_distro="Debian"
+NEOF
+
+# ── Bash Customization ─────────────────────────────────────────────────────
+cat >> /etc/skel/.bashrc << 'BASHEOF'
+
+# ── HarrisonOS shell enhancements ──────────────────────────────────────────
+
+# Prompt
+export PS1='\[\033[1;36m\]\u@harrisonos\[\033[0m\]:\[\033[1;34m\]\w\[\033[0m\]\$ '
+
+# Better defaults
+alias ll='ls -alFh --color=auto --group-directories-first'
+alias la='ls -A --color=auto'
+alias l='ls -CF --color=auto'
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+alias grep='grep --color=auto'
+alias df='df -h'
+alias du='du -h'
+alias free='free -h'
+alias cls='clear'
+alias q='exit'
+
+# Safety nets
+alias rm='rm -I'
+alias cp='cp -i'
+alias mv='mv -i'
+
+# System shortcuts
+alias update='sudo apt update && sudo apt upgrade -y'
+alias install='sudo apt install'
+alias search='apt search'
+alias ports='sudo ss -tulnp'
+alias myip='curl -s https://ifconfig.me && echo'
+alias weather='curl -s wttr.in/?format=3'
+
+# Dev shortcuts
+alias py='python3'
+alias venv='python3 -m venv .venv && source .venv/bin/activate'
+alias activate='source .venv/bin/activate'
+alias serve='python3 -m http.server 8000'
+alias json='python3 -m json.tool'
+
+# Docker shortcuts
+alias dps='docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Ports}}"'
+alias dlog='docker logs -f'
+alias dex='docker exec -it'
+
+# Git shortcuts
+alias gs='git status'
+alias ga='git add'
+alias gc='git commit'
+alias gp='git push'
+alias gl='git log --oneline -20'
+alias gd='git diff'
+
+# Use bat instead of cat if available
+if command -v batcat &>/dev/null; then
+    alias cat='batcat --style=plain'
+    alias bat='batcat'
+fi
+
+# Use exa instead of ls if available
+if command -v exa &>/dev/null; then
+    alias ls='exa --icons'
+    alias ll='exa -alh --icons --group-directories-first'
+    alias tree='exa --tree --icons'
+fi
+
+# fd-find is installed as fdfind on Debian
+if command -v fdfind &>/dev/null; then
+    alias fd='fdfind'
+fi
+
+# FZF integration
+if command -v fzf &>/dev/null; then
+    export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border'
+    if command -v fdfind &>/dev/null; then
+        export FZF_DEFAULT_COMMAND='fdfind --type f --hidden --follow --exclude .git'
+    fi
+fi
+
+# Show neofetch on first terminal
+if [[ -z "$NEOFETCH_SHOWN" ]]; then
+    export NEOFETCH_SHOWN=1
+    if command -v fastfetch &>/dev/null; then
+        fastfetch 2>/dev/null
+    elif command -v neofetch &>/dev/null; then
+        neofetch 2>/dev/null
+    fi
+fi
+BASHEOF
+
+# ── Zsh Configuration (for users who switch) ───────────────────────────────
+cat > /etc/skel/.zshrc << 'ZSHEOF'
+# HarrisonOS Zsh Config
+export HISTFILE=~/.zsh_history
+export HISTSIZE=10000
+export SAVEHIST=10000
+setopt SHARE_HISTORY
+setopt HIST_IGNORE_DUPS
+setopt HIST_IGNORE_SPACE
+setopt AUTO_CD
+setopt CORRECT
+
+# Prompt
+PROMPT='%F{cyan}%n@harrisonos%f:%F{blue}%~%f%# '
+
+# Source bash aliases (most are compatible)
+[[ -f ~/.bashrc ]] && source ~/.bashrc 2>/dev/null
+ZSHEOF
+
+# ── Git Global Config ──────────────────────────────────────────────────────
+cat > /etc/skel/.gitconfig << 'GITEOF'
+[init]
+    defaultBranch = main
+[color]
+    ui = auto
+[pull]
+    rebase = false
+[core]
+    editor = nano
+    autocrlf = input
+[alias]
+    st = status
+    co = checkout
+    br = branch
+    lg = log --oneline --graph --all
+GITEOF
+
+# ── Vim Config ──────────────────────────────────────────────────────────────
+cat > /etc/skel/.vimrc << 'VIMEOF'
+set number
+set relativenumber
+set tabstop=4
+set shiftwidth=4
+set expandtab
+set autoindent
+set smartindent
+set mouse=a
+set clipboard=unnamedplus
+set ignorecase
+set smartcase
+set hlsearch
+set incsearch
+set showmatch
+set wildmenu
+set wildmode=longest:full,full
+syntax on
+colorscheme desert
+VIMEOF
+
+# ── Nano Config ─────────────────────────────────────────────────────────────
+cat > /etc/skel/.nanorc << 'NANOEOF'
+set linenumbers
+set tabsize 4
+set tabstospaces
+set autoindent
+set mouse
+set smooth
+set constantshow
+include "/usr/share/nano/*.nanorc"
+NANOEOF
+
+# ── Tmux Config ─────────────────────────────────────────────────────────────
+cat > /etc/skel/.tmux.conf << 'TMUXEOF'
+# Better prefix
+set -g prefix C-a
+unbind C-b
+bind C-a send-prefix
+
+# Mouse support
+set -g mouse on
+
+# Start windows at 1
+set -g base-index 1
+setw -g pane-base-index 1
+
+# Easy splits
+bind | split-window -h -c "#{pane_current_path}"
+bind - split-window -v -c "#{pane_current_path}"
+
+# Better colors
+set -g default-terminal "tmux-256color"
+
+# Status bar
+set -g status-style 'bg=#1e293b fg=#94a3b8'
+set -g status-left '#[fg=#38bdf8,bold] #S '
+set -g status-right '#[fg=#64748b] %Y-%m-%d %H:%M '
+TMUXEOF
+
+# ── Enable useful services ─────────────────────────────────────────────────
+systemctl enable NetworkManager 2>/dev/null || true
+systemctl enable cups 2>/dev/null || true
+systemctl enable ssh 2>/dev/null || true
+systemctl enable docker 2>/dev/null || true
+systemctl enable libvirtd 2>/dev/null || true
+
+# ── Clean up ────────────────────────────────────────────────────────────────
+apt-get clean
+rm -rf /tmp/* /var/tmp/*
+
+echo "[HOOK] $DISTRO_NAME customizations complete!"

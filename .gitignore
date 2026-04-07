@@ -1,0 +1,7 @@
+build/
+*.iso
+*.log
+*.pyc
+__pycache__/
+.venv/
+*.tar.gz
